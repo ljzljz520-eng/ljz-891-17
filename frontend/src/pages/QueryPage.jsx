@@ -112,6 +112,20 @@ export default function QueryPage() {
                <ResultItem label="授权QQ" value={result.qq} />
                <ResultItem label="授权主人" value={result.owner} />
                <ResultItem label="所属产品" value={result.product} />
+               <ResultItem label="产品版本" value={result.product_version || '—'} />
+               {result.product_website && (
+                 <div className="bg-white/5 p-3 rounded-lg flex justify-between items-center group hover:bg-white/10 transition md:col-span-2">
+                    <span className="text-white/60">官网链接</span>
+                    <a
+                      href={result.product_website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sky-300 font-medium hover:text-sky-200 underline underline-offset-4 truncate ml-4"
+                    >
+                      {result.product_website}
+                    </a>
+                 </div>
+               )}
                <ResultItem label="授权上级" value={result.upline} />
                <ResultItem label="开通时间" value={result.created_at} />
                <ResultItem label="授权有效期" value={result.expiration} />

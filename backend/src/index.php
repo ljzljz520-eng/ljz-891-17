@@ -15,13 +15,17 @@ if (file_exists('vendor/autoload.php')) {
 } else {
     // Fallback if composer not run (should not happen in Docker)
     include_once './Config/Database.php';
+    include_once './Config/Migration.php';
     include_once './Controllers/AuthController.php';
     include_once './Controllers/LicenseController.php';
+    include_once './Controllers/ProductController.php';
 }
 
 use Config\Database;
+use Config\Migration;
 use Controllers\AuthController;
 use Controllers\LicenseController;
+use Controllers\ProductController;
 
 $database = new Database();
 $db = $database->getConnection();
@@ -62,6 +66,31 @@ elseif ($uri === '/api/license/list' && $_SERVER['REQUEST_METHOD'] === 'GET') {
 elseif ($uri === '/api/license/delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $license = new LicenseController($db);
     $license->delete();
+}
+// Product Management Routes (产品管理)
+elseif ($uri === '/api/product/list' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+    $product = new ProductController($db);
+    $product->list();
+}
+elseif ($uri === '/api/product/active' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+    $product = new ProductController($db);
+    $product->activeList();
+}
+elseif ($uri === '/api/product/create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $product = new ProductController($db);
+    $product->create();
+}
+elseif ($uri === '/api/product/update' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $product = new ProductController($db);
+    $product->update();
+}
+elseif ($uri === '/api/product/toggle' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $product = new ProductController($db);
+    $product->toggle();
+}
+elseif ($uri === '/api/product/delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $product = new ProductController($db);
+    $product->delete();
 }
 // Admin Management Routes
 elseif ($uri === '/api/auth/list' && $_SERVER['REQUEST_METHOD'] === 'GET') {
