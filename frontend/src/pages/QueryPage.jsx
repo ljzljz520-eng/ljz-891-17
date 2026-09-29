@@ -111,7 +111,14 @@ export default function QueryPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                <ResultItem label="授权QQ" value={result.qq} />
                <ResultItem label="授权主人" value={result.owner} />
-               <ResultItem label="所属产品" value={result.product} />
+               <ResultItem label="所属产品" value={
+                 <span className="flex items-center gap-2 justify-end">
+                   {result.product}
+                   {result.product_version && (
+                     <span className="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 text-xs border border-sky-500/20 font-mono">{result.product_version}</span>
+                   )}
+                 </span>
+               } />
                <ResultItem label="授权上级" value={result.upline} />
                <ResultItem label="开通时间" value={result.created_at} />
                <ResultItem label="授权有效期" value={result.expiration} />

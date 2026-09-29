@@ -15,16 +15,23 @@ if (file_exists('vendor/autoload.php')) {
 } else {
     // Fallback if composer not run (should not happen in Docker)
     include_once './Config/Database.php';
+    include_once './Config/Migration.php';
     include_once './Controllers/AuthController.php';
     include_once './Controllers/LicenseController.php';
+    include_once './Controllers/ProductController.php';
 }
 
 use Config\Database;
+use Config\Migration;
 use Controllers\AuthController;
 use Controllers\LicenseController;
+use Controllers\ProductController;
 
 $database = new Database();
 $db = $database->getConnection();
+
+// 自动迁移：确保产品表等结构存在（兼容已有数据卷）
+Migration::run($db);
 
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $uriParts = explode('/', $uri);
@@ -34,6 +41,7 @@ $uriParts = explode('/', $uri);
 // /api/license/query?qq=123
 // /api/license/create (POST)
 // /api/license/send-code (POST)
+// /api/product/list (GET)
 
 if ($uri === '/api/auth/login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $auth = new AuthController($db);
@@ -62,6 +70,23 @@ elseif ($uri === '/api/license/list' && $_SERVER['REQUEST_METHOD'] === 'GET') {
 elseif ($uri === '/api/license/delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $license = new LicenseController($db);
     $license->delete();
+}
+// Product Management Routes
+elseif ($uri === '/api/product/list' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+    $product = new ProductController($db);
+    $product->listAll();
+}
+elseif ($uri === '/api/product/create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $product = new ProductController($db);
+    $product->create();
+}
+elseif ($uri === '/api/product/update' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $product = new ProductController($db);
+    $product->update();
+}
+elseif ($uri === '/api/product/delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $product = new ProductController($db);
+    $product->delete();
 }
 // Admin Management Routes
 elseif ($uri === '/api/auth/list' && $_SERVER['REQUEST_METHOD'] === 'GET') {

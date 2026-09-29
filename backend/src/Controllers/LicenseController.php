@@ -22,7 +22,10 @@ class LicenseController {
         $qq = $_GET['qq'];
         $owner = $_GET['owner'];
 
-        $query = "SELECT * FROM licenses WHERE qq = :qq AND owner_name = :owner LIMIT 1";
+        $query = "SELECT l.*, p.name AS product_name, p.version AS product_version
+                  FROM licenses l
+                  LEFT JOIN products p ON l.product_id = p.id
+                  WHERE l.qq = :qq AND l.owner_name = :owner LIMIT 1";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(":qq", $qq);
         $stmt->bindParam(":owner", $owner);
@@ -34,14 +37,15 @@ class LicenseController {
             // But prompt also lists reasons for failure: "1.授权开通不足60分钟内" (implies < 60 mins from creation?) - this is weird, maybe it means 'just created'? or 'not synced'?
             // Usually "Authorization not found" reasons are generic boilerplate.
             // Let's just return the data.
-            
+
             http_response_code(200);
             echo json_encode([
                 "status" => "success",
                 "data" => [
                     "qq" => $row['qq'],
                     "owner" => $row['owner_name'],
-                    "product" => $row['product_name'],
+                    "product" => $row['product_name'] ?: '未知产品',
+                    "product_version" => $row['product_version'] ?: '',
                     "upline" => $row['upline'],
                     "expiration" => $row['expiration_date'],
                     "created_at" => $row['created_at']
@@ -64,7 +68,10 @@ class LicenseController {
 
     // Admin: List All
     public function listAll() {
-        $query = "SELECT * FROM licenses ORDER BY created_at DESC";
+        $query = "SELECT l.*, p.name AS product_name, p.version AS product_version
+                  FROM licenses l
+                  LEFT JOIN products p ON l.product_id = p.id
+                  ORDER BY l.created_at DESC";
         $stmt = $this->db->prepare($query);
         $stmt->execute();
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -74,18 +81,39 @@ class LicenseController {
     // Admin: Create
     public function create() {
         $data = json_decode(file_get_contents("php://input"));
-        // Need: qq, owner_name, product_name, upline, expiration_date
-        $query = "INSERT INTO licenses (qq, owner_name, product_name, upline, expiration_date) VALUES (:qq, :owner, :product, :upline, :exp)";
+        // Need: qq, owner_name, product_id, upline, expiration_date
+        if (empty($data->qq) || empty($data->owner_name) || empty($data->product_id) || empty($data->expiration_date)) {
+            http_response_code(400);
+            echo json_encode(["message" => "请填写完整授权信息并选择所属产品"]);
+            return;
+        }
+
+        // 校验产品存在且处于启用状态（停用产品不可新增授权）
+        $pstmt = $this->db->prepare("SELECT id, is_enabled FROM products WHERE id = :id LIMIT 1");
+        $pstmt->execute([':id' => $data->product_id]);
+        $product = $pstmt->fetch(PDO::FETCH_ASSOC);
+        if (!$product) {
+            http_response_code(400);
+            echo json_encode(["message" => "所选产品不存在"]);
+            return;
+        }
+        if (!(int)$product['is_enabled']) {
+            http_response_code(400);
+            echo json_encode(["message" => "该产品已停用，无法新增授权"]);
+            return;
+        }
+
+        $query = "INSERT INTO licenses (qq, owner_name, product_id, upline, expiration_date) VALUES (:qq, :owner, :product_id, :upline, :exp)";
         $stmt = $this->db->prepare($query);
-        
+
         $params = [
             ":qq" => $data->qq,
             ":owner" => $data->owner_name,
-            ":product" => $data->product_name,
-            ":upline" => $data->upline,
+            ":product_id" => $data->product_id,
+            ":upline" => isset($data->upline) && $data->upline !== '' ? $data->upline : '官方',
             ":exp" => $data->expiration_date
         ];
-        
+
         if($stmt->execute($params)) {
              echo json_encode(["message" => "Created successfully"]);
         } else {
